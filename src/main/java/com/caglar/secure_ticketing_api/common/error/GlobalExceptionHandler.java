@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -37,6 +38,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 		ErrorCode code = ex.code();
 		return ResponseEntity.status(code.status())
 				.body(apiError(code.status(), code, ex.getMessage(), request, null));
+	}
+
+	@ExceptionHandler(AccessDeniedException.class)
+	ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException ex, WebRequest request) {
+		return ResponseEntity.status(HttpStatus.FORBIDDEN)
+				.body(apiError(HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN,
+						"You do not have permission to perform this action.", request, null));
 	}
 
 	@ExceptionHandler(Exception.class)
