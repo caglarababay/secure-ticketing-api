@@ -39,6 +39,9 @@ public class Event {
 	@Column(nullable = false)
 	private int capacity;
 
+	@Column(name = "reserved_seats", nullable = false)
+	private int reservedSeats;
+
 	@Column(nullable = false)
 	private boolean published;
 
@@ -60,11 +63,22 @@ public class Event {
 	}
 
 	public void updateDetails(String title, String venue, Instant startsAt, Instant endsAt, int capacity) {
+		// Capacity cannot drop below what is already sold. 
+		if (capacity < this.reservedSeats) {
+			throw new ApiException(ErrorCode.CAPACITY_BELOW_RESERVED,
+					"Capacity cannot be reduced to %d; %d seat(s) are already reserved."
+							.formatted(capacity, this.reservedSeats));
+		}
+
 		this.title = title;
 		this.venue = venue;
 		this.startsAt = startsAt;
 		this.endsAt = endsAt;
 		this.capacity = capacity;
+	}
+
+	public boolean hasDifferentCapacityThan(int otherCapacity) {
+		return this.capacity != otherCapacity;
 	}
 
 	public void publish() {
@@ -104,6 +118,14 @@ public class Event {
 
 	public int getCapacity() {
 		return capacity;
+	}
+
+	public int getReservedSeats() {
+		return reservedSeats;
+	}
+
+	public int getAvailableSeats() {
+		return capacity - reservedSeats;
 	}
 
 	public boolean isPublished() {

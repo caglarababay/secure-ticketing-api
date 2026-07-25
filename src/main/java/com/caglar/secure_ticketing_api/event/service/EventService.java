@@ -2,6 +2,7 @@ package com.caglar.secure_ticketing_api.event.service;
 
 import java.time.Instant;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -13,6 +14,7 @@ import com.caglar.secure_ticketing_api.common.error.ErrorCode;
 import com.caglar.secure_ticketing_api.event.api.CreateEventRequest;
 import com.caglar.secure_ticketing_api.event.api.UpdateEventRequest;
 import com.caglar.secure_ticketing_api.event.domain.Event;
+import com.caglar.secure_ticketing_api.event.domain.EventCapacityChanged;
 import com.caglar.secure_ticketing_api.event.domain.EventRepository;
 import com.caglar.secure_ticketing_api.event.domain.EventSpecifications;
 
@@ -20,9 +22,11 @@ import com.caglar.secure_ticketing_api.event.domain.EventSpecifications;
 public class EventService {
 
 	private final EventRepository events;
+	private final ApplicationEventPublisher publisher;
 
-	EventService(EventRepository events) {
+	EventService(EventRepository events, ApplicationEventPublisher publisher) {
 		this.events = events;
+		this.publisher = publisher;
 	}
 
 	@Transactional
@@ -37,8 +41,15 @@ public class EventService {
 		Event event = require(id);
 		requireOwnerOrAdmin(event, callerId, callerIsAdmin);
 
+		boolean capacityChanged = event.hasDifferentCapacityThan(request.capacity());
+
 		event.updateDetails(request.title(), request.venue(), request.startsAt(),
 				request.endsAt(), request.capacity());
+
+		if (capacityChanged) {
+			publisher.publishEvent(new EventCapacityChanged(id));
+		}
+
 		return event;
 	}
 

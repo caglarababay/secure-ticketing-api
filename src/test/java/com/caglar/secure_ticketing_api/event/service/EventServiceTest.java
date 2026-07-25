@@ -15,7 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Pageable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.caglar.secure_ticketing_api.common.error.ApiException;
@@ -36,8 +36,11 @@ class EventServiceTest {
 	@Mock
 	private EventRepository events;
 
+	@Mock
+	private ApplicationEventPublisher publisher;
+
 	private EventService service() {
-		return new EventService(events);
+		return new EventService(events, publisher);
 	}
 
 	private Event storedEvent() {
