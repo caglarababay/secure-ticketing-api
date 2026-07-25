@@ -3,6 +3,7 @@ package com.caglar.secure_ticketing_api.common.config;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -38,6 +39,8 @@ public class SecurityConfig {
 				.formLogin(AbstractHttpConfigurer::disable)
 				.authorizeHttpRequests(auth -> auth
 						.requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/refresh")
+						.permitAll()
+						.requestMatchers(HttpMethod.GET, "/api/events/public")
 						.permitAll()
 						.anyRequest().authenticated())
 				.exceptionHandling(handling -> handling

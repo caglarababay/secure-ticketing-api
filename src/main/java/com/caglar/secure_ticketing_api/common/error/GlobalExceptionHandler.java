@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -45,6 +46,16 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 		return ResponseEntity.status(HttpStatus.FORBIDDEN)
 				.body(apiError(HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN,
 						"You do not have permission to perform this action.", request, null));
+	}
+
+	@ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+	ResponseEntity<ApiError> handleOptimisticLocking(ObjectOptimisticLockingFailureException ex,
+			WebRequest request) {
+
+		return ResponseEntity.status(HttpStatus.CONFLICT)
+				.body(apiError(HttpStatus.CONFLICT, ErrorCode.CONFLICT,
+						"This resource was modified by someone else. Reload it and try again.",
+						request, null));
 	}
 
 	@ExceptionHandler(Exception.class)
