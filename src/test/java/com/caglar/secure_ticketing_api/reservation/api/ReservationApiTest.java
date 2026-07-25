@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.time.Duration;
 import java.time.Instant;
 import java.util.EnumSet;
+import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,6 +38,7 @@ class ReservationApiTest {
 
 	private static final Instant STARTS = Instant.parse("2027-07-01T18:00:00Z");
 	private static final Instant ENDS = STARTS.plus(Duration.ofHours(4));
+	private static final String IDEMPOTENCY_KEY = "Idempotency-Key";
 
 	@Autowired
 	private MockMvc mockMvc;
@@ -101,12 +103,17 @@ class ReservationApiTest {
 		return "{\"seats\":%d}".formatted(seats);
 	}
 
+	private static String newKey() {
+		return UUID.randomUUID().toString();
+	}
+
 	// --- create -------------------------------------------------------------
 
 	@Test
 	void reservingAPublishedEventCreatesAPendingReservation() throws Exception {
 		mockMvc.perform(post("/api/events/" + publishedEventId + "/reservations")
 						.header(HttpHeaders.AUTHORIZATION, customerToken)
+						.header(IDEMPOTENCY_KEY, newKey())
 						.contentType(MediaType.APPLICATION_JSON).content(seatsJson(2)))
 				.andExpect(status().isCreated())
 				.andExpect(jsonPath("$.status").value("PENDING"))
@@ -119,6 +126,7 @@ class ReservationApiTest {
 	void reservingADraftEventIsRejected() throws Exception {
 		mockMvc.perform(post("/api/events/" + draftEventId + "/reservations")
 						.header(HttpHeaders.AUTHORIZATION, customerToken)
+						.header(IDEMPOTENCY_KEY, newKey())
 						.contentType(MediaType.APPLICATION_JSON).content(seatsJson(1)))
 				.andExpect(status().isConflict())
 				.andExpect(jsonPath("$.code").value("EVENT_NOT_PUBLISHED"));
@@ -128,6 +136,7 @@ class ReservationApiTest {
 	void askingForMoreSeatsThanRemainIsRejected() throws Exception {
 		mockMvc.perform(post("/api/events/" + publishedEventId + "/reservations")
 						.header(HttpHeaders.AUTHORIZATION, customerToken)
+						.header(IDEMPOTENCY_KEY, newKey())
 						.contentType(MediaType.APPLICATION_JSON).content(seatsJson(11)))
 				.andExpect(status().isConflict())
 				.andExpect(jsonPath("$.code").value("INSUFFICIENT_CAPACITY"));
@@ -137,6 +146,7 @@ class ReservationApiTest {
 	void missingEventIsNotFound() throws Exception {
 		mockMvc.perform(post("/api/events/999999/reservations")
 						.header(HttpHeaders.AUTHORIZATION, customerToken)
+						.header(IDEMPOTENCY_KEY, newKey())
 						.contentType(MediaType.APPLICATION_JSON).content(seatsJson(1)))
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.code").value("NOT_FOUND"));
@@ -146,6 +156,7 @@ class ReservationApiTest {
 	void seatsMustBePositive() throws Exception {
 		mockMvc.perform(post("/api/events/" + publishedEventId + "/reservations")
 						.header(HttpHeaders.AUTHORIZATION, customerToken)
+						.header(IDEMPOTENCY_KEY, newKey())
 						.contentType(MediaType.APPLICATION_JSON).content(seatsJson(0)))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
