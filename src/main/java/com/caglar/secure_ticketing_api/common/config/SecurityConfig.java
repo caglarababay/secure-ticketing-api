@@ -20,6 +20,7 @@ import com.caglar.secure_ticketing_api.auth.api.ApiErrorAccessDeniedHandler;
 import com.caglar.secure_ticketing_api.auth.api.ApiErrorAuthenticationEntryPoint;
 import com.caglar.secure_ticketing_api.auth.api.JwtAuthenticationFilter;
 import com.caglar.secure_ticketing_api.auth.service.JwtProperties;
+import com.caglar.secure_ticketing_api.common.ratelimit.RateLimitFilter;
 import com.caglar.secure_ticketing_api.idempotency.api.IdempotencyFilter;
 
 
@@ -32,6 +33,7 @@ public class SecurityConfig {
 	@Bean
 	SecurityFilterChain securityFilterChain(HttpSecurity http,
 			JwtAuthenticationFilter jwtAuthenticationFilter,
+			RateLimitFilter rateLimitFilter,
 			IdempotencyFilter idempotencyFilter,
 			ApiErrorAuthenticationEntryPoint entryPoint,
 			ApiErrorAccessDeniedHandler accessDeniedHandler) throws Exception {
@@ -51,6 +53,7 @@ public class SecurityConfig {
 						.authenticationEntryPoint(entryPoint)
 						.accessDeniedHandler(accessDeniedHandler))
 				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+				.addFilterAfter(rateLimitFilter, JwtAuthenticationFilter.class)
 				.addFilterAfter(idempotencyFilter, AuthorizationFilter.class)
 				.build();
 	}
@@ -59,7 +62,18 @@ public class SecurityConfig {
 	FilterRegistrationBean<IdempotencyFilter> idempotencyFilterRegistration(
 			IdempotencyFilter filter) {
 
-		FilterRegistrationBean<IdempotencyFilter> registration = new FilterRegistrationBean<>(filter);
+		return unregisteredFromServletChain(filter);
+	}
+
+	@Bean
+	FilterRegistrationBean<RateLimitFilter> rateLimitFilterRegistration(RateLimitFilter filter) {
+		return unregisteredFromServletChain(filter);
+	}
+
+	private <T extends jakarta.servlet.Filter> FilterRegistrationBean<T> unregisteredFromServletChain(
+			T filter) {
+
+		FilterRegistrationBean<T> registration = new FilterRegistrationBean<>(filter);
 		registration.setEnabled(false);
 		return registration;
 	}

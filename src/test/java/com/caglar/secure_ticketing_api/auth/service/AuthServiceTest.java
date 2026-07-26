@@ -24,6 +24,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import com.caglar.secure_ticketing_api.audit.service.AuditRecorder;
 import com.caglar.secure_ticketing_api.auth.api.LoginRequest;
 import com.caglar.secure_ticketing_api.auth.api.RegisterRequest;
 import com.caglar.secure_ticketing_api.auth.api.TokenResponse;
@@ -47,8 +48,12 @@ class AuthServiceTest {
 	@Mock
 	private JwtService jwtService;
 
+	@Mock
+	private AuditRecorder audit;
+
 	private AuthService authService() {
-		return new AuthService(users, passwordEncoder, jwtService, Clock.fixed(NOW, ZoneOffset.UTC));
+		return new AuthService(users, passwordEncoder, jwtService, audit,
+				Clock.fixed(NOW, ZoneOffset.UTC));
 	}
 
 	private User existingUser(String email, String hash) {

@@ -2,6 +2,7 @@ package com.caglar.secure_ticketing_api.reservation.domain;
 
 import java.time.Instant;
 
+import com.caglar.secure_ticketing_api.audit.service.AuditableResource;
 import com.caglar.secure_ticketing_api.common.error.ApiException;
 import com.caglar.secure_ticketing_api.common.error.ErrorCode;
 
@@ -17,7 +18,7 @@ import jakarta.persistence.Version;
 
 @Entity
 @Table(name = "reservations")
-public class Reservation {
+public class Reservation implements AuditableResource {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -81,6 +82,11 @@ public class Reservation {
 
 	public boolean isOwnedBy(Long candidateUserId) {
 		return this.userId.equals(candidateUserId);
+	}
+
+	@Override
+	public Long auditId() {
+		return this.id;
 	}
 
 	public Long getId() {

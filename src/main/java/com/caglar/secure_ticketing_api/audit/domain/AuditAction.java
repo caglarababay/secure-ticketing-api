@@ -1,0 +1,13 @@
+package com.caglar.secure_ticketing_api.audit.domain;
+
+
+public enum AuditAction {
+
+	REGISTERED,
+	LOGIN_SUCCEEDED,
+	LOGIN_FAILED,
+	EVENT_PUBLISHED,
+	RESERVATION_CREATED,
+	RESERVATION_CONFIRMED,
+	RESERVATION_CANCELLED
+}

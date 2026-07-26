@@ -8,6 +8,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.caglar.secure_ticketing_api.audit.domain.AuditAction;
+import com.caglar.secure_ticketing_api.audit.domain.AuditResource;
+import com.caglar.secure_ticketing_api.audit.service.Audited;
 import com.caglar.secure_ticketing_api.common.error.ApiException;
 import com.caglar.secure_ticketing_api.common.error.ErrorCode;
 import com.caglar.secure_ticketing_api.event.domain.Event;
@@ -37,6 +40,7 @@ public class ReservationService {
 	}
 
 	@Transactional
+	@Audited(action = AuditAction.RESERVATION_CREATED, resource = AuditResource.RESERVATION)
 	public Reservation create(Long eventId, Long userId, int seats) {
 		if (soldOutCache.isSoldOut(eventId)) {
 			throw new ApiException(ErrorCode.INSUFFICIENT_CAPACITY,
@@ -53,6 +57,7 @@ public class ReservationService {
 	}
 
 	@Transactional
+	@Audited(action = AuditAction.RESERVATION_CONFIRMED, resource = AuditResource.RESERVATION)
 	public Reservation confirm(Long id, Long callerId, boolean callerIsAdmin) {
 		Reservation reservation = require(id);
 		requireOwnerOrAdmin(reservation, callerId, callerIsAdmin);
@@ -62,6 +67,7 @@ public class ReservationService {
 	}
 
 	@Transactional
+	@Audited(action = AuditAction.RESERVATION_CANCELLED, resource = AuditResource.RESERVATION)
 	public Reservation cancel(Long id, Long callerId, boolean callerIsAdmin) {
 		Reservation reservation = require(id);
 		requireOwnerOrAdmin(reservation, callerId, callerIsAdmin);

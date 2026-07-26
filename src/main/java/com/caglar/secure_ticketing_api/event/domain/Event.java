@@ -2,6 +2,7 @@ package com.caglar.secure_ticketing_api.event.domain;
 
 import java.time.Instant;
 
+import com.caglar.secure_ticketing_api.audit.service.AuditableResource;
 import com.caglar.secure_ticketing_api.common.error.ApiException;
 import com.caglar.secure_ticketing_api.common.error.ErrorCode;
 
@@ -15,7 +16,7 @@ import jakarta.persistence.Version;
 
 @Entity
 @Table(name = "events")
-public class Event {
+public class Event implements AuditableResource {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -90,6 +91,11 @@ public class Event {
 
 	public boolean isOwnedBy(Long userId) {
 		return this.ownerId.equals(userId);
+	}
+
+	@Override
+	public Long auditId() {
+		return this.id;
 	}
 
 	public Long getId() {

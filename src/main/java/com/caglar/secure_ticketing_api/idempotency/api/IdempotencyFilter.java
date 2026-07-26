@@ -8,8 +8,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.http.server.PathContainer;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.util.ContentCachingResponseWrapper;
@@ -18,6 +16,7 @@ import org.springframework.web.util.pattern.PathPatternParser;
 
 import com.caglar.secure_ticketing_api.common.error.ApiErrorResponseWriter;
 import com.caglar.secure_ticketing_api.common.error.ErrorCode;
+import com.caglar.secure_ticketing_api.common.security.AuthenticatedActor;
 import com.caglar.secure_ticketing_api.idempotency.service.IdempotencyClaim;
 import com.caglar.secure_ticketing_api.idempotency.service.IdempotencyService;
 import com.caglar.secure_ticketing_api.idempotency.service.ReplayRenderer;
@@ -42,14 +41,17 @@ public class IdempotencyFilter extends OncePerRequestFilter {
 	private final IdempotencyService idempotency;
 	private final RequestFingerprint fingerprint;
 	private final ApiErrorResponseWriter errorWriter;
+	private final AuthenticatedActor actor;
 	private final List<GuardedEndpoint> guarded;
 
 	IdempotencyFilter(IdempotencyService idempotency, RequestFingerprint fingerprint,
-			ApiErrorResponseWriter errorWriter, List<ReplayRenderer> renderers) {
+			ApiErrorResponseWriter errorWriter, AuthenticatedActor actor,
+			List<ReplayRenderer> renderers) {
 
 		this.idempotency = idempotency;
 		this.fingerprint = fingerprint;
 		this.errorWriter = errorWriter;
+		this.actor = actor;
 		this.guarded = renderers.stream().map(GuardedEndpoint::of).toList();
 	}
 
@@ -63,7 +65,7 @@ public class IdempotencyFilter extends OncePerRequestFilter {
 			return;
 		}
 
-		Long userId = authenticatedUserId();
+		Long userId = actor.currentId();
 		if (userId == null) {
 			
 			chain.doFilter(request, response);
@@ -173,19 +175,6 @@ public class IdempotencyFilter extends OncePerRequestFilter {
 				.filter(endpoint -> endpoint.matches(request.getMethod(), path))
 				.findFirst()
 				.orElse(null);
-	}
-
-	private Long authenticatedUserId() {
-		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-		if (authentication == null || !authentication.isAuthenticated()) {
-			return null;
-		}
-		try {
-			return Long.valueOf(String.valueOf(authentication.getPrincipal()));
-		}
-		catch (NumberFormatException ex) {
-			return null;
-		}
 	}
 
 	private record GuardedEndpoint(String method, PathPattern pattern, String descriptor,

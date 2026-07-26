@@ -8,6 +8,9 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
+import com.caglar.secure_ticketing_api.common.resilience.CircuitBreakerProperties;
+import com.caglar.secure_ticketing_api.common.resilience.RedisCircuitBreaker;
+
 
 @Configuration
 @EnableScheduling
@@ -16,11 +19,14 @@ class ReservationConfig {
 
 	@Bean
 	SoldOutCache soldOutCache(SoldOutCacheProperties properties,
+			CircuitBreakerProperties breakerProperties,
 			StringRedisTemplate redisTemplate, Clock clock) {
 
 		if (!properties.enabled()) {
 			return new NoOpSoldOutCache();
 		}
-		return new RedisSoldOutCache(redisTemplate, new RedisCircuitBreaker(clock), properties.ttl());
+		
+		return new RedisSoldOutCache(redisTemplate,
+				new RedisCircuitBreaker(breakerProperties, clock), properties.ttl());
 	}
 }

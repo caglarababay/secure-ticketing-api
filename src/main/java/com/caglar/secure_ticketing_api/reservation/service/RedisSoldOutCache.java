@@ -6,6 +6,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
+import com.caglar.secure_ticketing_api.common.resilience.RedisCircuitBreaker;
+
 
 class RedisSoldOutCache implements SoldOutCache {
 

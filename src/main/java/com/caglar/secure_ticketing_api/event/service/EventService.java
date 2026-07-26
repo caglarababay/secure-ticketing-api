@@ -9,6 +9,9 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.caglar.secure_ticketing_api.audit.domain.AuditAction;
+import com.caglar.secure_ticketing_api.audit.domain.AuditResource;
+import com.caglar.secure_ticketing_api.audit.service.Audited;
 import com.caglar.secure_ticketing_api.common.error.ApiException;
 import com.caglar.secure_ticketing_api.common.error.ErrorCode;
 import com.caglar.secure_ticketing_api.event.api.CreateEventRequest;
@@ -54,6 +57,7 @@ public class EventService {
 	}
 
 	@Transactional
+	@Audited(action = AuditAction.EVENT_PUBLISHED, resource = AuditResource.EVENT)
 	public Event publish(Long id, Long callerId, boolean callerIsAdmin) {
 		Event event = require(id);
 		requireOwnerOrAdmin(event, callerId, callerIsAdmin);

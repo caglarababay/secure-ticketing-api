@@ -24,6 +24,8 @@ import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
+import com.caglar.secure_ticketing_api.common.resilience.RedisCircuitBreaker;
+
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -42,7 +44,7 @@ class RedisSoldOutCacheTest {
 	}
 
 	private RedisCircuitBreaker breaker() {
-		return new RedisCircuitBreaker(Clock.fixed(NOW, ZoneOffset.UTC));
+		return new RedisCircuitBreaker(3, Duration.ofSeconds(30), Clock.fixed(NOW, ZoneOffset.UTC));
 	}
 
 	@Test
