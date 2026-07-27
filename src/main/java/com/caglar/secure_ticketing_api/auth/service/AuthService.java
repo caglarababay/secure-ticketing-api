@@ -3,9 +3,7 @@ package com.caglar.secure_ticketing_api.auth.service;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.EnumSet;
-import java.util.Locale;
 
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
@@ -27,38 +25,27 @@ import com.caglar.secure_ticketing_api.common.error.ErrorCode;
 public class AuthService {
 
 	private final UserRepository users;
+	private final AccountCreator accounts;
 	private final PasswordEncoder passwordEncoder;
 	private final JwtService jwtService;
 	private final AuditRecorder audit;
 	private final Clock clock;
 
-	AuthService(UserRepository users, PasswordEncoder passwordEncoder, JwtService jwtService,
-			AuditRecorder audit, Clock clock) {
+	AuthService(UserRepository users, AccountCreator accounts, PasswordEncoder passwordEncoder,
+			JwtService jwtService, AuditRecorder audit, Clock clock) {
 
 		this.users = users;
+		this.accounts = accounts;
 		this.passwordEncoder = passwordEncoder;
 		this.jwtService = jwtService;
 		this.audit = audit;
 		this.clock = clock;
 	}
 
+	/** Always CUSTOMER: nobody hands themselves a role by signing up. */
 	@Transactional
 	public User register(RegisterRequest request) {
-		String email = normalise(request.email());
-		if (users.existsByEmail(email)) {
-			throw new ApiException(ErrorCode.EMAIL_ALREADY_EXISTS, "That email address is already registered.");
-		}
-
-		User user = new User(email, passwordEncoder.encode(request.password()),
-				EnumSet.of(Role.CUSTOMER), Instant.now(clock));
-		User saved;
-		try {
-			saved = users.save(user);
-		}
-		catch (DataIntegrityViolationException ex) {
-			throw new ApiException(ErrorCode.EMAIL_ALREADY_EXISTS,
-					"That email address is already registered.", ex);
-		}
+		User saved = accounts.create(request.email(), request.password(), EnumSet.of(Role.CUSTOMER));
 
 		audit.recordFor(saved.getId(), AuditAction.REGISTERED, AuditResource.USER, saved.getId());
 		return saved;
@@ -66,7 +53,7 @@ public class AuthService {
 
 	@Transactional
 	public TokenResponse login(LoginRequest request) {
-		User user = users.findByEmail(normalise(request.email())).orElse(null);
+		User user = users.findByEmail(accounts.normalise(request.email())).orElse(null);
 		if (user == null) {
 			throw rejectLogin(null);
 		}
@@ -104,9 +91,5 @@ public class AuthService {
 	private TokenResponse issueTokens(User user) {
 		return TokenResponse.bearer(jwtService.createAccessToken(user),
 				jwtService.createRefreshToken(user), jwtService.accessTokenTtlSeconds());
-	}
-
-	private String normalise(String email) {
-		return email.trim().toLowerCase(Locale.ROOT);
 	}
 }

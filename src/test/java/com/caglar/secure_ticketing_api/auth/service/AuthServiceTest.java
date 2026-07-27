@@ -4,6 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.anySet;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -13,6 +16,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.EnumSet;
+import java.util.Locale;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
@@ -24,6 +28,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import com.caglar.secure_ticketing_api.audit.domain.AuditAction;
+import com.caglar.secure_ticketing_api.audit.domain.AuditResource;
 import com.caglar.secure_ticketing_api.audit.service.AuditRecorder;
 import com.caglar.secure_ticketing_api.auth.api.LoginRequest;
 import com.caglar.secure_ticketing_api.auth.api.RegisterRequest;
@@ -49,10 +55,15 @@ class AuthServiceTest {
 	private JwtService jwtService;
 
 	@Mock
+	private AccountCreator accounts;
+
+	@Mock
 	private AuditRecorder audit;
 
 	private AuthService authService() {
-		return new AuthService(users, passwordEncoder, jwtService, audit,
+		lenient().when(accounts.normalise(anyString()))
+				.thenAnswer(call -> call.getArgument(0, String.class).trim().toLowerCase(Locale.ROOT));
+		return new AuthService(users, accounts, passwordEncoder, jwtService, audit,
 				Clock.fixed(NOW, ZoneOffset.UTC));
 	}
 
@@ -65,68 +76,41 @@ class AuthServiceTest {
 	// --- register -----------------------------------------------------------
 
 	@Test
-	void registerStoresHashedPasswordAndCustomerRole() {
-		when(users.existsByEmail("new@test.com")).thenReturn(false);
-		when(passwordEncoder.encode("secret123")).thenReturn("hashed");
-		when(users.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+	void registerAlwaysAsksForCustomerAndNothingMore() {
+		User created = existingUser("new@test.com", "hashed");
+		when(accounts.create(eq("new@test.com"), eq("secret123"), anySet())).thenReturn(created);
 
 		authService().register(new RegisterRequest("new@test.com", "secret123"));
 
-		ArgumentCaptor<User> saved = ArgumentCaptor.forClass(User.class);
-		verify(users).save(saved.capture());
-		assertThat(saved.getValue().getPasswordHash()).isEqualTo("hashed");
-		assertThat(saved.getValue().getRoles()).containsExactly(Role.CUSTOMER);
-		assertThat(saved.getValue().getCreatedAt()).isEqualTo(NOW);
+		ArgumentCaptor<java.util.Set<Role>> roles = ArgumentCaptor.forClass(java.util.Set.class);
+		verify(accounts).create(anyString(), anyString(), roles.capture());
+		assertThat(roles.getValue())
+				.as("signing up must never be a way to grant yourself a role")
+				.containsExactly(Role.CUSTOMER);
 	}
 
 	@Test
-	void registerNeverStoresTheRawPassword() {
-		when(users.existsByEmail(anyString())).thenReturn(false);
-		when(passwordEncoder.encode("secret123")).thenReturn("hashed");
-		when(users.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+	void registrationIsRecordedAgainstTheNewAccount() {
+		User created = existingUser("new@test.com", "hashed");
+		when(accounts.create(anyString(), anyString(), anySet())).thenReturn(created);
 
 		authService().register(new RegisterRequest("new@test.com", "secret123"));
 
-		ArgumentCaptor<User> saved = ArgumentCaptor.forClass(User.class);
-		verify(users).save(saved.capture());
-		assertThat(saved.getValue().getPasswordHash()).isNotEqualTo("secret123");
+		verify(audit).recordFor(created.getId(), AuditAction.REGISTERED, AuditResource.USER,
+				created.getId());
 	}
 
 	@Test
-	void registerLowercasesAndTrimsEmail() {
-		when(users.existsByEmail("mixed@test.com")).thenReturn(false);
-		when(passwordEncoder.encode(anyString())).thenReturn("hashed");
-		when(users.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-		authService().register(new RegisterRequest("  MiXeD@Test.COM  ", "secret123"));
-
-		ArgumentCaptor<User> saved = ArgumentCaptor.forClass(User.class);
-		verify(users).save(saved.capture());
-		assertThat(saved.getValue().getEmail()).isEqualTo("mixed@test.com");
-	}
-
-	@Test
-	void registerRejectsDuplicateEmail() {
-		when(users.existsByEmail("taken@test.com")).thenReturn(true);
+	void registerPropagatesADuplicateAddress() {
+		when(accounts.create(anyString(), anyString(), anySet()))
+				.thenThrow(new ApiException(ErrorCode.EMAIL_ALREADY_EXISTS, "taken"));
 
 		assertThatThrownBy(() -> authService().register(new RegisterRequest("taken@test.com", "secret123")))
 				.isInstanceOf(ApiException.class)
 				.extracting(ex -> ((ApiException) ex).code())
 				.isEqualTo(ErrorCode.EMAIL_ALREADY_EXISTS);
 
-		verify(users, never()).save(any());
-	}
-
-	@Test
-	void registerTranslatesUniqueConstraintViolationToConflict() {
-		when(users.existsByEmail(anyString())).thenReturn(false);
-		when(passwordEncoder.encode(anyString())).thenReturn("hashed");
-		when(users.save(any(User.class))).thenThrow(new DataIntegrityViolationException("duplicate key"));
-
-		assertThatThrownBy(() -> authService().register(new RegisterRequest("race@test.com", "secret123")))
-				.isInstanceOf(ApiException.class)
-				.extracting(ex -> ((ApiException) ex).code())
-				.isEqualTo(ErrorCode.EMAIL_ALREADY_EXISTS);
+		verify(audit, never()).recordFor(any(), any(), any(), any());
 	}
 
 	// --- login --------------------------------------------------------------

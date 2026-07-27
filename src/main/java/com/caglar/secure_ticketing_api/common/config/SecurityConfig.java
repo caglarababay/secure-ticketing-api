@@ -48,6 +48,9 @@ public class SecurityConfig {
 						.permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/events/public")
 						.permitAll()
+						.requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info")
+						.permitAll()
+						.requestMatchers("/actuator/**").hasRole("ADMIN")
 						.anyRequest().authenticated())
 				.exceptionHandling(handling -> handling
 						.authenticationEntryPoint(entryPoint)

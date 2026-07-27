@@ -157,7 +157,21 @@ class RoleAccessMatrixTest {
 			"POST,   /api/reservations/{reservation}/cancel,  ORGANIZER, 403",
 			"POST,   /api/reservations/{reservation}/cancel,  CUSTOMER,  403",
 			"POST,   /api/reservations/{reservation}/cancel,  ANONYMOUS, 401",
-			"POST,   /api/reservations/{ownedReservation}/cancel,  OWNER, 200" })
+			"POST,   /api/reservations/{ownedReservation}/cancel,  OWNER, 200",
+
+			"POST,   /api/admin/users,                   ADMIN,      201",
+			"POST,   /api/admin/users,                   ORGANIZER,  403",
+			"POST,   /api/admin/users,                   CUSTOMER,   403",
+			"POST,   /api/admin/users,                   OWNER,      403",
+			"POST,   /api/admin/users,                   ANONYMOUS,  401",
+
+			"GET,    /actuator/health,                   ANONYMOUS,  200",
+			"GET,    /actuator/health,                   CUSTOMER,   200",
+			"GET,    /actuator/info,                     ANONYMOUS,  200",
+			"GET,    /actuator/metrics,                  ADMIN,      200",
+			"GET,    /actuator/metrics,                  ORGANIZER,  403",
+			"GET,    /actuator/metrics,                  CUSTOMER,   403",
+			"GET,    /actuator/metrics,                  ANONYMOUS,  401" })
 	void theAccessMatrixHolds(String method, String path, String role, int expected) throws Exception {
 		mockMvc.perform(request(method, resolve(path), role))
 				.andExpect(status().is(expected));
@@ -182,6 +196,11 @@ class RoleAccessMatrixTest {
 	private String bodyFor(String path) {
 		if (path.endsWith("/reservations")) {
 			return "{\"seats\":1}";
+		}
+		if (path.startsWith("/api/admin/users")) {
+			return """
+					{"email":"matrix-%s@test.com","password":"secret123","roles":["CUSTOMER"]}
+					""".formatted(java.util.UUID.randomUUID());
 		}
 		if (path.startsWith("/api/events") && !path.contains("publish")) {
 			return """

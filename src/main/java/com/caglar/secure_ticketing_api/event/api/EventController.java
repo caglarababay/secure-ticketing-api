@@ -19,6 +19,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+
 import com.caglar.secure_ticketing_api.common.api.PageResponse;
 import com.caglar.secure_ticketing_api.event.service.EventService;
 
@@ -36,6 +40,10 @@ public class EventController {
 		this.eventService = eventService;
 	}
 
+	@Operation(summary = "Create a draft event")
+	@ApiResponses({
+			@ApiResponse(responseCode = "201", description = "Draft created"),
+			@ApiResponse(responseCode = "403", description = "CUSTOMER accounts cannot create events") })
 	@PostMapping
 	@PreAuthorize("hasAnyRole('ORGANIZER', 'ADMIN')")
 	@ResponseStatus(HttpStatus.CREATED)
@@ -45,6 +53,11 @@ public class EventController {
 		return EventResponse.from(eventService.create(request, Long.valueOf(userId)));
 	}
 
+	@Operation(summary = "Update an event")
+	@ApiResponses({
+			@ApiResponse(responseCode = "200", description = "Updated"),
+			@ApiResponse(responseCode = "403", description = "Not the owner"),
+			@ApiResponse(responseCode = "409", description = "Capacity would fall below reserved seats") })
 	@PutMapping("/{id}")
 	@PreAuthorize("hasAnyRole('ORGANIZER', 'ADMIN')")
 	EventResponse update(@PathVariable Long id, @Valid @RequestBody UpdateEventRequest request,
@@ -54,6 +67,11 @@ public class EventController {
 				Long.valueOf(userId), isAdmin(authentication)));
 	}
 
+	@Operation(summary = "Publish a draft")
+	@ApiResponses({
+			@ApiResponse(responseCode = "200", description = "Published"),
+			@ApiResponse(responseCode = "403", description = "Not the owner"),
+			@ApiResponse(responseCode = "409", description = "Already published") })
 	@PostMapping("/{id}/publish")
 	@PreAuthorize("hasAnyRole('ORGANIZER', 'ADMIN')")
 	EventResponse publish(@PathVariable Long id,
@@ -62,6 +80,7 @@ public class EventController {
 		return EventResponse.from(eventService.publish(id, Long.valueOf(userId), isAdmin(authentication)));
 	}
 
+	@Operation(summary = "List events, drafts included")
 	@GetMapping
 	PageResponse<EventResponse> list(@RequestParam(required = false) Long ownerId,
 			@PageableDefault(size = 20, sort = "startsAt") Pageable pageable) {
@@ -69,6 +88,7 @@ public class EventController {
 		return PageResponse.from(eventService.list(ownerId, pageable), EventResponse::from);
 	}
 
+	@Operation(summary = "Browse published events")
 	@GetMapping("/public")
 	PageResponse<EventResponse> discover(
 			@RequestParam(required = false) Instant from,
