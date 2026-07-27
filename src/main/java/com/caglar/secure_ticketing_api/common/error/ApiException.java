@@ -5,6 +5,8 @@ package com.caglar.secure_ticketing_api.common.error;
  */
 public class ApiException extends RuntimeException {
 
+	private static final long serialVersionUID = 1L;
+
 	private final ErrorCode code;
 
 	public ApiException(ErrorCode code, String message) {

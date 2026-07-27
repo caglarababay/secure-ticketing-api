@@ -141,7 +141,7 @@ class IdempotencyApiTest {
 		reserve(customerToken, key, 2).andExpect(status().isCreated());
 
 		reserve(customerToken, key, 5)
-				.andExpect(status().isUnprocessableEntity())
+				.andExpect(status().isUnprocessableContent())
 				.andExpect(jsonPath("$.code").value("IDEMPOTENCY_KEY_REUSED"));
 
 		assertThat(reservations.count()).isEqualTo(1);
@@ -161,7 +161,7 @@ class IdempotencyApiTest {
 						.header(HttpHeaders.AUTHORIZATION, customerToken)
 						.header(IDEMPOTENCY_KEY, key)
 						.contentType(MediaType.APPLICATION_JSON).content(seatsJson(2)))
-				.andExpect(status().isUnprocessableEntity())
+				.andExpect(status().isUnprocessableContent())
 				.andExpect(jsonPath("$.code").value("IDEMPOTENCY_KEY_REUSED"));
 	}
 

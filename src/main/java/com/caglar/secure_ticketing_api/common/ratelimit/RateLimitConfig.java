@@ -28,7 +28,8 @@ class RateLimitConfig {
 			return local;
 		}
 
-		DistributedRateLimiter shared = new DistributedRateLimiter(sharedCounters(connectionFactory));
+		DistributedRateLimiter shared =
+				new DistributedRateLimiter(() -> sharedCounters(connectionFactory));
 		return new ResilientRateLimiter(shared, local,
 				new RedisCircuitBreaker(breakerProperties, clock), properties.instances());
 	}

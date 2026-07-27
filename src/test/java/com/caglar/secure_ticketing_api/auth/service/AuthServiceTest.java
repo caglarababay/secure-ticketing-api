@@ -82,7 +82,7 @@ class AuthServiceTest {
 
 		authService().register(new RegisterRequest("new@test.com", "secret123"));
 
-		ArgumentCaptor<java.util.Set<Role>> roles = ArgumentCaptor.forClass(java.util.Set.class);
+		ArgumentCaptor<java.util.Set<Role>> roles = ArgumentCaptor.captor();
 		verify(accounts).create(anyString(), anyString(), roles.capture());
 		assertThat(roles.getValue())
 				.as("signing up must never be a way to grant yourself a role")
