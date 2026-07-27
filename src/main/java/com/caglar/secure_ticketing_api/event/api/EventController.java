@@ -43,6 +43,7 @@ public class EventController {
 	@Operation(summary = "Create a draft event")
 	@ApiResponses({
 			@ApiResponse(responseCode = "201", description = "Draft created"),
+			@ApiResponse(responseCode = "401", description = "No token, or an expired one"),
 			@ApiResponse(responseCode = "403", description = "CUSTOMER accounts cannot create events") })
 	@PostMapping
 	@PreAuthorize("hasAnyRole('ORGANIZER', 'ADMIN')")
@@ -56,7 +57,9 @@ public class EventController {
 	@Operation(summary = "Update an event")
 	@ApiResponses({
 			@ApiResponse(responseCode = "200", description = "Updated"),
+			@ApiResponse(responseCode = "401", description = "No token, or an expired one"),
 			@ApiResponse(responseCode = "403", description = "Not the owner"),
+			@ApiResponse(responseCode = "404", description = "No such event"),
 			@ApiResponse(responseCode = "409", description = "Capacity would fall below reserved seats") })
 	@PutMapping("/{id}")
 	@PreAuthorize("hasAnyRole('ORGANIZER', 'ADMIN')")
@@ -70,7 +73,9 @@ public class EventController {
 	@Operation(summary = "Publish a draft")
 	@ApiResponses({
 			@ApiResponse(responseCode = "200", description = "Published"),
+			@ApiResponse(responseCode = "401", description = "No token, or an expired one"),
 			@ApiResponse(responseCode = "403", description = "Not the owner"),
+			@ApiResponse(responseCode = "404", description = "No such event"),
 			@ApiResponse(responseCode = "409", description = "Already published") })
 	@PostMapping("/{id}/publish")
 	@PreAuthorize("hasAnyRole('ORGANIZER', 'ADMIN')")

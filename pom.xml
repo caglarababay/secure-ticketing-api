@@ -99,6 +99,13 @@
 			<scope>runtime</scope>
 		</dependency>
 
+		<!-- Starts compose.yaml with the application and injects the connection settings. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-docker-compose</artifactId>
+			<optional>true</optional>
+		</dependency>
+
 		<dependency>
 			<groupId>com.h2database</groupId>
 			<artifactId>h2</artifactId>

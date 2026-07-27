@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.headers.Header;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 
@@ -31,7 +33,9 @@ public class AuthController {
 	@ApiResponses({
 			@ApiResponse(responseCode = "201", description = "Account created"),
 			@ApiResponse(responseCode = "409", description = "Address already registered"),
-			@ApiResponse(responseCode = "429", description = "Too many attempts; see Retry-After") })
+			@ApiResponse(responseCode = "429", description = "Too many attempts from this address",
+					headers = @Header(name = "Retry-After", description = "Seconds to wait",
+							schema = @Schema(type = "integer"))) })
 	@PostMapping("/register")
 	@ResponseStatus(HttpStatus.CREATED)
 	UserResponse register(@Valid @RequestBody RegisterRequest request) {
@@ -42,7 +46,9 @@ public class AuthController {
 	@ApiResponses({
 			@ApiResponse(responseCode = "200", description = "Access and refresh tokens"),
 			@ApiResponse(responseCode = "401", description = "Invalid email or password"),
-			@ApiResponse(responseCode = "429", description = "Too many attempts; see Retry-After") })
+			@ApiResponse(responseCode = "429", description = "Too many attempts from this address",
+					headers = @Header(name = "Retry-After", description = "Seconds to wait",
+							schema = @Schema(type = "integer"))) })
 	@PostMapping("/login")
 	TokenResponse login(@Valid @RequestBody LoginRequest request) {
 		return authService.login(request);

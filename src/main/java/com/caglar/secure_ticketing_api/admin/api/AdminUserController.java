@@ -30,6 +30,7 @@ public class AdminUserController {
 	@ApiResponses({
 			@ApiResponse(responseCode = "201", description = "Account created with the given roles"),
 			@ApiResponse(responseCode = "400", description = "Invalid address, short password, or no roles"),
+			@ApiResponse(responseCode = "401", description = "No token, or an expired one"),
 			@ApiResponse(responseCode = "403", description = "Caller is not an ADMIN"),
 			@ApiResponse(responseCode = "409", description = "Address already registered") })
 	@PostMapping

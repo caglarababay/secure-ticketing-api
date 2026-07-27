@@ -171,7 +171,12 @@ class RoleAccessMatrixTest {
 			"GET,    /actuator/metrics,                  ADMIN,      200",
 			"GET,    /actuator/metrics,                  ORGANIZER,  403",
 			"GET,    /actuator/metrics,                  CUSTOMER,   403",
-			"GET,    /actuator/metrics,                  ANONYMOUS,  401" })
+			"GET,    /actuator/metrics,                  ANONYMOUS,  401",
+
+			// the schema lists every route and its shape, so it is not public either
+			"GET,    /v3/api-docs,                       CUSTOMER,   200",
+			"GET,    /v3/api-docs,                       ANONYMOUS,  401",
+			"GET,    /swagger-ui/index.html,             ANONYMOUS,  401" })
 	void theAccessMatrixHolds(String method, String path, String role, int expected) throws Exception {
 		mockMvc.perform(request(method, resolve(path), role))
 				.andExpect(status().is(expected));

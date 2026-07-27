@@ -15,6 +15,9 @@ import com.caglar.secure_ticketing_api.reservation.service.ReservationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.headers.Header;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
@@ -44,19 +47,32 @@ public class ReservationController {
 					`X-Idempotent-Replay: true` rather than taking a second set of seats.
 					""")
 	@ApiResponses({
-			@ApiResponse(responseCode = "201", description = "Seats held; reservation is PENDING"),
+			@ApiResponse(responseCode = "201", description = "Seats held; reservation is PENDING",
+					headers = @Header(name = "X-Idempotent-Replay",
+							description = "Present and `true` when this is a replay of an earlier "
+									+ "request rather than a new reservation",
+							schema = @Schema(type = "boolean"))),
 			@ApiResponse(responseCode = "400",
 					description = "Invalid seat count, or a missing/unusable Idempotency-Key",
-					content = @io.swagger.v3.oas.annotations.media.Content),
+					content = @Content),
+			@ApiResponse(responseCode = "401", description = "No token, or an expired one",
+					content = @Content),
+			@ApiResponse(responseCode = "404", description = "No such event", content = @Content),
 			@ApiResponse(responseCode = "409",
 					description = "Event not published, not enough seats left, or an "
 							+ "earlier request with this key is still running",
-					content = @io.swagger.v3.oas.annotations.media.Content),
+					content = @Content),
 			@ApiResponse(responseCode = "422",
 					description = "This Idempotency-Key was already used with a different request",
-					content = @io.swagger.v3.oas.annotations.media.Content),
-			@ApiResponse(responseCode = "429", description = "Too many reservations; see Retry-After",
-					content = @io.swagger.v3.oas.annotations.media.Content) })
+					content = @Content),
+			@ApiResponse(responseCode = "429", description = "Too many reservations",
+					content = @Content,
+					headers = {
+							@Header(name = "Retry-After", description = "Seconds to wait",
+									schema = @Schema(type = "integer")),
+							@Header(name = "X-RateLimit-Remaining",
+									description = "Requests left in the window",
+									schema = @Schema(type = "integer")) }) })
 	ReservationResponse create(@PathVariable Long eventId,
 			@Parameter(in = ParameterIn.HEADER, name = "Idempotency-Key", required = true,
 					description = "A UUID identifying this attempt. Reuse it when retrying.")
@@ -73,10 +89,14 @@ public class ReservationController {
 					+ "change the seat count — the seats were already held.")
 	@ApiResponses({
 			@ApiResponse(responseCode = "200", description = "Reservation is now CONFIRMED"),
+			@ApiResponse(responseCode = "401", description = "No token, or an expired one",
+					content = @Content),
 			@ApiResponse(responseCode = "403", description = "Not the owner",
-					content = @io.swagger.v3.oas.annotations.media.Content),
+					content = @Content),
+			@ApiResponse(responseCode = "404", description = "No such reservation",
+					content = @Content),
 			@ApiResponse(responseCode = "409", description = "Not a legal transition from its current state",
-					content = @io.swagger.v3.oas.annotations.media.Content) })
+					content = @Content) })
 	ReservationResponse confirm(@PathVariable Long id,
 			@AuthenticationPrincipal String userId, Authentication authentication) {
 
@@ -90,10 +110,14 @@ public class ReservationController {
 					+ "refundable. Cancelling is what returns seats to the pool.")
 	@ApiResponses({
 			@ApiResponse(responseCode = "200", description = "Reservation is now CANCELLED"),
+			@ApiResponse(responseCode = "401", description = "No token, or an expired one",
+					content = @Content),
 			@ApiResponse(responseCode = "403", description = "Not the owner",
-					content = @io.swagger.v3.oas.annotations.media.Content),
+					content = @Content),
+			@ApiResponse(responseCode = "404", description = "No such reservation",
+					content = @Content),
 			@ApiResponse(responseCode = "409", description = "Already cancelled",
-					content = @io.swagger.v3.oas.annotations.media.Content) })
+					content = @Content) })
 	ReservationResponse cancel(@PathVariable Long id,
 			@AuthenticationPrincipal String userId, Authentication authentication) {
 

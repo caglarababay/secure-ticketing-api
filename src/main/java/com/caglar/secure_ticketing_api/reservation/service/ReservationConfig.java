@@ -10,11 +10,13 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 import com.caglar.secure_ticketing_api.common.resilience.CircuitBreakerProperties;
 import com.caglar.secure_ticketing_api.common.resilience.RedisCircuitBreaker;
+import com.caglar.secure_ticketing_api.reservation.api.ReservationRequestLimits;
 
 
 @Configuration
 @EnableScheduling
-@EnableConfigurationProperties({ SoldOutCacheProperties.class, ReservationProperties.class })
+@EnableConfigurationProperties({ SoldOutCacheProperties.class, ReservationProperties.class,
+		ReservationRequestLimits.class })
 class ReservationConfig {
 
 	@Bean
